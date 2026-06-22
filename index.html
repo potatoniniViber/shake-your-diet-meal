@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>🍀 幸运食谱</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, sans-serif; }
+        body { background: #fdf6f0; min-height: 100vh; display: flex; justify-content: center; padding: 20px 16px 40px; }
+        .app { max-width: 420px; width: 100%; background: #ffffff; border-radius: 36px; box-shadow: 0 12px 40px rgba(210,140,100,0.15); padding: 24px 20px 30px; }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            color: #3d2c1e;
+        }
+        .header h1 span { color: #e67e22; }
+        .date-display {
+            font-size: 14px;
+            color: #7a4a2e;
+            background: #f5ebe4;
+            padding: 4px 12px;
+            border-radius: 30px;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        .export-icon, .settings-icon {
+            font-size: 22px;
+            cursor: pointer;
+            background: #f5ebe4;
+            padding: 4px 10px;
+            border-radius: 30px;
+            transition: 0.15s;
+            border: none;
+            line-height: 1;
+        }
+        .export-icon:active, .settings-icon:active { transform: scale(0.92); }
+
+        .target-cal { background: #f5ebe4; padding: 6px 14px; border-radius: 30px; font-size: 14px; font-weight: 600; color: #7a4a2e; display: inline-flex; align-items: center; gap: 6px; margin-bottom: 10px; }
+        .target-cal strong { color: #d35400; cursor: pointer; border-bottom: 1px dashed #d35400; padding: 0 2px; }
+        .target-cal strong:hover { background: #f0e3da; border-radius: 4px; }
+        .edit-hint { font-size: 11px; color: #a9846a; font-weight: 400; }
+        .shake-btn-wrap { display: flex; flex-direction: column; align-items: stretch; gap: 8px; margin: 8px 0 18px; }
+        #shakeBtn { background: linear-gradient(145deg, #f39c12, #e67e22); border: none; color: white; font-size: 18px; font-weight: 700; padding: 14px 20px; border-radius: 60px; box-shadow: 0 8px 20px rgba(230,126,34,0.35); display: flex; align-items: center; justify-content: center; gap: 12px; cursor: pointer; transition: all 0.15s; border: 1px solid rgba(255,255,255,0.2); }
+        #shakeBtn:active { transform: scale(0.94); }
+        #shakeBtn:disabled { opacity: 0.6; pointer-events: none; }
+        .shake-icon { display: inline-block; transition: transform 0.2s; }
+        .shaking .shake-icon { animation: diceRoll 0.6s cubic-bezier(0.36, 0.07, 0.19, 0.97) both; }
+        @keyframes diceRoll { 0% { transform: rotate(0deg) scale(1); } 25% { transform: rotate(20deg) scale(1.2); } 50% { transform: rotate(-20deg) scale(0.9); } 75% { transform: rotate(10deg) scale(1.1); } 100% { transform: rotate(0deg) scale(1); } }
+        .shake-total { font-size: 15px; background: rgba(255,255,255,0.25); padding: 2px 14px; border-radius: 30px; font-weight: 600; }
+        .meal-grid { display: flex; flex-direction: column; gap: 14px; margin: 14px 0 18px; min-height: 340px; }
+        .meal-card { background: #fcf8f5; border-radius: 20px; padding: 14px 18px; border: 1px solid #f0e3da; position: relative; }
+        .meal-card.fixed { border-color: #e67e22; background: #fdf6f0; }
+        .meal-card .meal-tag { font-size: 12px; font-weight: 700; color: white; background: #b8957a; padding: 2px 14px; border-radius: 30px; display: inline-block; margin-bottom: 6px; }
+        .meal-card .meal-tag.breakfast { background: #e67e22; }
+        .meal-card .meal-tag.lunch { background: #d35400; }
+        .meal-card .meal-tag.dinner { background: #7f8c8d; }
+        .meal-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+        .meal-name { font-size: 17px; font-weight: 650; color: #2c1f14; }
+        .meal-cal { font-size: 15px; font-weight: 600; color: #d35400; background: #f0e3da; padding: 1px 12px; border-radius: 30px; }
+        .fix-btn { background: transparent; border: none; font-size: 22px; cursor: pointer; padding: 0 4px; transition: 0.1s; line-height: 1; }
+        .fix-btn.active { color: #e74c3c; text-shadow: 0 0 8px rgba(231,76,60,0.3); }
+        .fix-btn:active { transform: scale(0.9); }
+        .recipe-detail { margin-top: 6px; padding-top: 8px; border-top: 1px dashed #e6d6cc; }
+        .recipe-detail .ingredients { font-size: 13px; color: #3d2c1e; background: #f5eee9; padding: 6px 12px; border-radius: 12px; margin-bottom: 6px; }
+        .recipe-detail .ingredients strong { color: #d35400; }
+        .recipe-detail .method { font-size: 13px; color: #5f4b3c; padding: 4px 8px; background: #fff; border-radius: 8px; border-left: 3px solid #e67e22; }
+        .recipe-detail .method strong { color: #2c1f14; }
+        .summary { background: #f5ebe4; border-radius: 24px; padding: 16px 18px; margin-top: 8px; }
+        .cal-progress { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+        .cal-progress .label { font-size: 14px; font-weight: 600; color: #4a3426; white-space: nowrap; }
+        .progress-bar-bg { flex: 1; height: 8px; background: #ddd0c6; border-radius: 20px; overflow: hidden; }
+        .progress-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #f1c40f, #e67e22); border-radius: 20px; transition: width 0.4s ease; }
+        .cal-numbers { font-size: 15px; font-weight: 700; color: #2c1f14; min-width: 72px; text-align: right; }
+        .macro-row { display: flex; justify-content: space-around; gap: 6px; }
+        .macro-item { text-align: center; flex: 1; background: white; border-radius: 40px; padding: 6px 0; font-size: 13px; font-weight: 500; color: #3d2c1e; }
+        .macro-item .num { font-weight: 700; font-size: 15px; }
+        .macro-item .num.p { color: #2980b9; }
+        .macro-item .num.c { color: #27ae60; }
+        .macro-item .num.f { color: #e67e22; }
+        .status-tip { text-align: center; font-size: 13px; color: #7f6b5c; margin: 6px 0 2px; min-height: 20px; }
+        .status-tip.success { color: #27ae60; font-weight: 600; }
+        .status-tip.danger { color: #e74c3c; font-weight: 600; }
+        .fixed-info { margin-top: 12px; border-top: 2px dashed #e6d6cc; padding-top: 12px; font-size: 14px; color: #7a4a2e; display: flex; justify-content: center; }
+        @media (max-width: 400px) { .app { padding: 18px 14px; } .meal-name { font-size: 15px; } }
+
+        .settings-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.3);
+            backdrop-filter: blur(4px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .settings-overlay.active { display: flex; }
+        .settings-panel {
+            background: #fff;
+            border-radius: 32px;
+            padding: 28px 24px;
+            max-width: 380px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+        }
+        .settings-panel h2 { font-size: 20px; margin-bottom: 16px; color: #3d2c1e; text-align: center; }
+        .settings-group { margin-bottom: 16px; border-bottom: 1px solid #eee; padding-bottom: 12px; }
+        .settings-group:last-of-type { border-bottom: none; }
+        .settings-group .meal-label { font-weight: 600; font-size: 16px; color: #3d2c1e; display: block; margin-bottom: 8px; }
+        .settings-options { display: flex; gap: 8px; flex-wrap: wrap; }
+        .settings-option { flex: 1; min-width: 60px; padding: 8px 12px; border-radius: 40px; background: #f5ebe4; text-align: center; cursor: pointer; transition: 0.15s; border: 2px solid transparent; font-size: 14px; font-weight: 500; color: #3d2c1e; }
+        .settings-option.active { border-color: #e67e22; background: #fdf6f0; }
+        .settings-option input { display: none; }
+        .settings-option label { cursor: pointer; display: block; }
+        .settings-actions { margin-top: 16px; display: flex; gap: 10px; justify-content: center; }
+        .settings-btn { padding: 10px 20px; border: none; border-radius: 40px; font-weight: 600; cursor: pointer; transition: 0.15s; }
+        .settings-btn:active { transform: scale(0.96); }
+        .settings-btn.primary { background: #e67e22; color: white; flex: 1; }
+        .settings-btn.all-unlimited { background: #d4c5b8; color: #3d2c1e; flex: 0 0 auto; }
+    </style>
+</head>
+<body>
+<div class="app" id="app">
+    <div class="header">
+        <div class="header-left">
+            <h1>🍀 幸运<span>食谱</span></h1>
+            <div class="date-display" id="dateDisplay"></div>
+        </div>
+        <div class="header-actions">
+            <button class="settings-icon" id="settingsBtn" title="设置每餐来源">⚙️</button>
+            <button class="export-icon" id="exportBtn" title="导出已吃记录">📤</button>
+        </div>
+    </div>
+
+    <div class="target-cal">
+        🎯 目标 <strong id="targetDisplay">1500</strong> kcal
+        <span class="edit-hint">✎ 点击修改</span>
+    </div>
+
+    <div class="shake-btn-wrap">
+        <button id="shakeBtn">
+            <span class="shake-icon">🎲</span> 摇一摇 · 今日幸运
+            <span class="shake-total" id="shakeTotal">0 kcal</span>
+        </button>
+    </div>
+
+    <div class="meal-grid" id="mealGrid"></div>
+
+    <div class="summary">
+        <div class="cal-progress">
+            <span class="label">🔥 已固定总热量</span>
+            <div class="progress-bar-bg"><div class="progress-bar-fill" id="calFill" style="width:0%"></div></div>
+            <span class="cal-numbers" id="calDisplay">0 / 1500</span>
+        </div>
+        <div class="macro-row">
+            <div class="macro-item">🥩 蛋白 <span class="num p" id="proteinDisplay">0</span>g</div>
+            <div class="macro-item">🍚 碳水 <span class="num c" id="carbsDisplay">0</span>g</div>
+            <div class="macro-item">🧈 脂肪 <span class="num f" id="fatDisplay">0</span>g</div>
+        </div>
+    </div>
+    <div class="status-tip" id="statusTip">👆 点击❤️固定餐点，再次点击取消</div>
+
+    <div class="fixed-info">
+        <span>❤️ 已固定：<span id="fixedCount">0</span> 餐</span>
+    </div>
+</div>
+
+<!-- 设置弹窗 -->
+<div class="settings-overlay" id="settingsOverlay">
+    <div class="settings-panel">
+        <h2>⚙️ 每餐来源设置</h2>
+        <div class="settings-group">
+            <span class="meal-label">🌅 早餐</span>
+            <div class="settings-options" data-meal="breakfast">
+                <div class="settings-option active" data-value="all"><input type="radio" name="source_breakfast" value="all" id="src_breakfast_all" checked><label for="src_breakfast_all">不限</label></div>
+                <div class="settings-option" data-value="homemade"><input type="radio" name="source_breakfast" value="homemade" id="src_breakfast_homemade"><label for="src_breakfast_homemade">自制</label></div>
+                <div class="settings-option" data-value="takeout"><input type="radio" name="source_breakfast" value="takeout" id="src_breakfast_takeout"><label for="src_breakfast_takeout">外卖</label></div>
+            </div>
+        </div>
+        <div class="settings-group">
+            <span class="meal-label">☀️ 午餐</span>
+            <div class="settings-options" data-meal="lunch">
+                <div class="settings-option active" data-value="all"><input type="radio" name="source_lunch" value="all" id="src_lunch_all" checked><label for="src_lunch_all">不限</label></div>
+                <div class="settings-option" data-value="homemade"><input type="radio" name="source_lunch" value="homemade" id="src_lunch_homemade"><label for="src_lunch_homemade">自制</label></div>
+                <div class="settings-option" data-value="takeout"><input type="radio" name="source_lunch" value="takeout" id="src_lunch_takeout"><label for="src_lunch_takeout">外卖</label></div>
+            </div>
+        </div>
+        <div class="settings-group">
+            <span class="meal-label">🌙 晚餐</span>
+            <div class="settings-options" data-meal="dinner">
+                <div class="settings-option active" data-value="all"><input type="radio" name="source_dinner" value="all" id="src_dinner_all" checked><label for="src_dinner_all">不限</label></div>
+                <div class="settings-option" data-value="homemade"><input type="radio" name="source_dinner" value="homemade" id="src_dinner_homemade"><label for="src_dinner_homemade">自制</label></div>
+                <div class="settings-option" data-value="takeout"><input type="radio" name="source_dinner" value="takeout" id="src_dinner_takeout"><label for="src_dinner_takeout">外卖</label></div>
+            </div>
+        </div>
+        <div class="settings-actions">
+            <button class="settings-btn all-unlimited" id="setAllUnlimited">🌐 全部不限</button>
+            <button class="settings-btn primary" id="settingsSave">确认保存</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ============================================================
+    // 完整食物库（三餐各50道，共150道）
+    // ============================================================
+    const MEAL_DATA = {
+        breakfast: [
+            { id: 'b1', name: '燕麦坚果粥', calories: 320, protein: 12, carbs: 40, fat: 10, ingredients: '燕麦片40g，脱脂牛奶200ml，巴旦木10g，蓝莓30g', method: '燕麦加牛奶小火煮3分钟，关火撒上坚果碎和蓝莓。', source: 'homemade' },
+            { id: 'b2', name: '全麦鸡蛋三明治', calories: 350, protein: 18, carbs: 32, fat: 14, ingredients: '全麦面包2片(60g)，鸡蛋1个(50g)，生菜20g，低脂沙拉酱5g', method: '鸡蛋煎熟，夹入生菜和酱料，对半切开。', source: 'homemade' },
+            { id: 'b3', name: '蒸红薯+水煮蛋', calories: 290, protein: 11, carbs: 46, fat: 5, ingredients: '红薯200g，鸡蛋1个(50g)', method: '红薯蒸20分钟，鸡蛋冷水下锅煮8分钟，剥壳对半切。', source: 'homemade' },
+            { id: 'b4', name: '希腊酸奶碗', calories: 280, protein: 20, carbs: 22, fat: 8, ingredients: '无糖希腊酸奶150g，混合浆果(蓝莓+树莓)60g，即食燕麦片15g', method: '酸奶倒碗中，铺上浆果，撒上燕麦片。', source: 'homemade' },
+            { id: 'b5', name: '玉米+热牛奶', calories: 310, protein: 10, carbs: 38, fat: 12, ingredients: '甜玉米1根(约200g)，低脂牛奶250ml', method: '玉米蒸熟或水煮15分钟，牛奶微波加热1分钟。', source: 'homemade' },
+            { id: 'b6', name: '荞麦凉面', calories: 340, protein: 14, carbs: 48, fat: 8, ingredients: '干荞麦面60g，鸡蛋1个(50g)，黄瓜丝30g，生抽+醋+小米辣调汁', method: '荞麦面煮4分钟过凉水，蛋皮切丝，浇上酱汁拌匀。', source: 'homemade' },
+            { id: 'b7', name: '紫薯+豆浆', calories: 270, protein: 12, carbs: 42, fat: 4, ingredients: '小紫薯2个(共150g)，无糖豆浆250ml', method: '紫薯蒸20分钟，豆浆加热后搭配饮用。', source: 'homemade' },
+            { id: 'b8', name: '蔬菜蛋饼', calories: 300, protein: 16, carbs: 18, fat: 16, ingredients: '鸡蛋2个(100g)，西葫芦丝50g，胡萝卜丝30g，全麦粉20g', method: '所有食材混合搅匀，平底锅少油煎至两面金黄。', source: 'homemade' },
+            { id: 'b9', name: '奇亚籽布丁', calories: 260, protein: 9, carbs: 20, fat: 15, ingredients: '奇亚籽20g，椰奶150ml，芒果丁40g', method: '奇亚籽+椰奶冷藏过夜，取出铺上芒果丁。', source: 'homemade' },
+            { id: 'b10', name: '藜麦鸡肉粥', calories: 330, protein: 22, carbs: 34, fat: 9, ingredients: '生藜麦30g，鸡胸肉丝40g，姜丝5g，水400ml', method: '藜麦煮15分钟，加鸡丝和姜丝再煮5分钟，加盐调味。', source: 'homemade' },
+            { id: 'b11', name: '凉拌黄瓜', calories: 45, protein: 2, carbs: 8, fat: 1, ingredients: '黄瓜200g，蒜末10g，生抽10ml，香醋5ml', method: '黄瓜拍碎，加入蒜末、生抽、香醋拌匀。', source: 'homemade' },
+            { id: 'b12', name: '番茄蛋花汤', calories: 80, protein: 6, carbs: 10, fat: 3, ingredients: '番茄200g，鸡蛋1个，葱花5g，盐', method: '番茄炒出汁，加水烧开，淋入蛋液，撒葱花。', source: 'homemade' },
+            { id: 'b13', name: '清炒油麦菜', calories: 60, protein: 2, carbs: 8, fat: 3, ingredients: '油麦菜300g，蒜末10g，油5g', method: '油热下蒜末，放油麦菜快速翻炒，加盐出锅。', source: 'homemade' },
+            { id: 'b14', name: '白灼西兰花', calories: 55, protein: 4, carbs: 10, fat: 1, ingredients: '西兰花300g，蚝油10g', method: '西兰花焯水2分钟，捞出淋上蚝油。', source: 'homemade' },
+            { id: 'b15', name: '蒸南瓜', calories: 70, protein: 2, carbs: 16, fat: 0.5, ingredients: '南瓜300g', method: '南瓜切块蒸15分钟。', source: 'homemade' },
+            { id: 'b16', name: '凉拌海带丝', calories: 50, protein: 2, carbs: 10, fat: 1, ingredients: '干海带20g(泡发)，蒜末5g，醋10ml', method: '海带泡发煮熟，切丝加蒜末醋拌匀。', source: 'homemade' },
+            { id: 'b17', name: '水煮蛋', calories: 80, protein: 7, carbs: 1, fat: 5, ingredients: '鸡蛋2个', method: '冷水下锅煮8分钟，过凉水剥壳。', source: 'homemade' },
+            { id: 'b18', name: '凉拌豆腐', calories: 90, protein: 8, carbs: 5, fat: 5, ingredients: '内酯豆腐200g，生抽10ml，香油2ml，葱花', method: '豆腐切块，淋上生抽、香油，撒葱花。', source: 'homemade' },
+            { id: 'b19', name: '烤红薯', calories: 130, protein: 2, carbs: 30, fat: 0.5, ingredients: '红薯250g', method: '红薯洗净，烤箱200度烤40分钟。', source: 'homemade' },
+            { id: 'b20', name: '蒸山药', calories: 85, protein: 3, carbs: 18, fat: 0.5, ingredients: '铁棍山药200g', method: '山药去皮切段蒸20分钟。', source: 'homemade' },
+            { id: 'b21', name: '凉拌木耳', calories: 40, protein: 1, carbs: 8, fat: 1, ingredients: '干木耳15g，蒜末5g，生抽10ml，醋5ml', method: '木耳泡发焯水，加调料拌匀。', source: 'homemade' },
+            { id: 'b22', name: '清汤娃娃菜', calories: 50, protein: 2, carbs: 10, fat: 1, ingredients: '娃娃菜300g，姜片', method: '娃娃菜洗净，加水煮10分钟，加盐调味。', source: 'homemade' },
+            { id: 'b23', name: '蒸蛋羹', calories: 90, protein: 8, carbs: 3, fat: 5, ingredients: '鸡蛋2个，温水150ml，盐', method: '鸡蛋打散加温水过筛，蒸10分钟。', source: 'homemade' },
+            { id: 'b24', name: '凉拌萝卜丝', calories: 30, protein: 1, carbs: 6, fat: 0.5, ingredients: '白萝卜200g，盐，醋', method: '萝卜切丝，盐腌10分钟挤水，加醋拌匀。', source: 'homemade' },
+            { id: 'b25', name: '水果拼盘', calories: 120, protein: 1, carbs: 30, fat: 0.5, ingredients: '苹果100g，橙子100g，草莓50g', method: '水果洗净切块装盘。', source: 'homemade' },
+            { id: 'b26', name: '绿豆汤', calories: 60, protein: 2, carbs: 14, fat: 0.3, ingredients: '绿豆50g，水500ml，冰糖5g', method: '绿豆煮至开花，加冰糖调味。', source: 'homemade' },
+            { id: 'b27', name: '薏米水', calories: 50, protein: 1, carbs: 12, fat: 0.5, ingredients: '薏米30g，水500ml', method: '薏米煮30分钟，取水饮用。', source: 'homemade' },
+            { id: 'b28', name: '柠檬水', calories: 20, protein: 0, carbs: 5, fat: 0, ingredients: '柠檬2片，蜂蜜5g，水500ml', method: '柠檬片加蜂蜜，温水冲泡。', source: 'homemade' },
+            { id: 'b29', name: '无糖豆浆', calories: 60, protein: 4, carbs: 8, fat: 2, ingredients: '无糖豆浆250ml', method: '直接饮用或加热。', source: 'homemade' },
+            { id: 'b30', name: '黑咖啡', calories: 5, protein: 0, carbs: 0, fat: 0, ingredients: '黑咖啡粉2g，热水200ml', method: '冲调即可。', source: 'homemade' },
+            { id: 'b31', name: '美式咖啡', calories: 10, protein: 0, carbs: 0, fat: 0, ingredients: '浓缩咖啡30ml，热水200ml', method: '咖啡液加热水。', source: 'homemade' },
+            { id: 'b32', name: '拿铁（脱脂奶）', calories: 80, protein: 6, carbs: 10, fat: 1, ingredients: '浓缩咖啡30ml，脱脂牛奶200ml', method: '咖啡加蒸奶。', source: 'homemade' },
+            { id: 'b33', name: '椰子汁（无糖）', calories: 45, protein: 1, carbs: 10, fat: 0.5, ingredients: '椰子水300ml', method: '直接饮用。', source: 'homemade' },
+            { id: 'b34', name: '希腊酸奶（原味）', calories: 120, protein: 10, carbs: 6, fat: 6, ingredients: '希腊酸奶150g', method: '直接食用。', source: 'homemade' },
+            { id: 'b35', name: '脱脂牛奶', calories: 70, protein: 7, carbs: 10, fat: 0.5, ingredients: '脱脂牛奶250ml', method: '直接饮用或加热。', source: 'homemade' },
+            { id: 'b36', name: '麦当劳麦满分（鸡蛋）', calories: 300, protein: 16, carbs: 32, fat: 12, ingredients: '英式松饼，鸡蛋，芝士', method: '直接购买。', source: 'takeout' },
+            { id: 'b37', name: '肯德基帕尼尼（鸡肉）', calories: 350, protein: 20, carbs: 34, fat: 14, ingredients: '面包，鸡肉，生菜', method: '直接购买。', source: 'takeout' },
+            { id: 'b38', name: '全家便利店饭团（金枪鱼）', calories: 220, protein: 8, carbs: 38, fat: 4, ingredients: '米饭，金枪鱼，海苔', method: '即食。', source: 'takeout' },
+            { id: 'b39', name: '7-11 三明治（火腿）', calories: 250, protein: 12, carbs: 30, fat: 10, ingredients: '吐司，火腿，生菜', method: '即食。', source: 'takeout' },
+            { id: 'b40', name: '星巴克美式（大杯）', calories: 15, protein: 0, carbs: 2, fat: 0, ingredients: '美式咖啡', method: '直接购买。', source: 'takeout' },
+            { id: 'b41', name: '星巴克拿铁（脱脂）', calories: 100, protein: 8, carbs: 12, fat: 1, ingredients: '咖啡，脱脂牛奶', method: '直接购买。', source: 'takeout' },
+            { id: 'b42', name: '椰子水（盒装）', calories: 50, protein: 0, carbs: 12, fat: 0, ingredients: '椰子水300ml', method: '即饮。', source: 'takeout' },
+            { id: 'b43', name: '酸奶（低脂）', calories: 110, protein: 8, carbs: 14, fat: 2, ingredients: '低脂酸奶150g', method: '即食。', source: 'takeout' },
+            { id: 'b44', name: '豆浆（无糖）', calories: 60, protein: 4, carbs: 8, fat: 2, ingredients: '豆浆250ml', method: '即饮。', source: 'takeout' },
+            { id: 'b45', name: '水果杯', calories: 100, protein: 1, carbs: 24, fat: 0.5, ingredients: '混合水果150g', method: '即食。', source: 'takeout' },
+            { id: 'b46', name: '水煮蛋（便利店）', calories: 80, protein: 7, carbs: 1, fat: 5, ingredients: '鸡蛋2个', method: '即食。', source: 'takeout' },
+            { id: 'b47', name: '烤红薯（便利店）', calories: 130, protein: 2, carbs: 30, fat: 0.5, ingredients: '红薯200g', method: '即食。', source: 'takeout' },
+            { id: 'b48', name: '玉米杯', calories: 150, protein: 4, carbs: 32, fat: 2, ingredients: '甜玉米粒150g', method: '即食。', source: 'takeout' },
+            { id: 'b49', name: '关东煮（萝卜）', calories: 30, protein: 1, carbs: 6, fat: 0, ingredients: '白萝卜1块', method: '即食。', source: 'takeout' },
+            { id: 'b50', name: '关东煮（海带结）', calories: 25, protein: 1, carbs: 5, fat: 0, ingredients: '海带结2个', method: '即食。', source: 'takeout' }
+        ],
+        lunch: [
+            { id: 'l1', name: '黑椒牛肉糙米饭', calories: 580, protein: 35, carbs: 52, fat: 22, ingredients: '牛里脊150g，洋葱50g，糙米(生)50g，黑椒酱10g', method: '糙米提前泡2小时蒸熟。牛肉切条用黑椒酱腌制10分钟，与洋葱同炒至熟。', source: 'homemade' },
+            { id: 'l2', name: '凉拌鸡丝荞麦面', calories: 490, protein: 32, carbs: 48, fat: 14, ingredients: '鸡胸肉100g，干荞麦面50g，黄瓜丝40g，生抽+醋+辣椒油调汁', method: '鸡胸煮熟撕丝，荞麦面煮4分钟过凉，加黄瓜丝和酱汁拌匀。', source: 'homemade' },
+            { id: 'l3', name: '清蒸鲈鱼+糙米', calories: 520, protein: 40, carbs: 44, fat: 16, ingredients: '鲈鱼1条(250g)，姜丝10g，葱段10g，糙米(生)50g', method: '糙米蒸熟。鲈鱼抹盐铺姜葱，水开后蒸8分钟，淋热油和蒸鱼豉油。', source: 'homemade' },
+            { id: 'l4', name: '番茄牛肉豆腐煲', calories: 550, protein: 38, carbs: 30, fat: 26, ingredients: '牛腩(去脂)120g，番茄200g，嫩豆腐100g，番茄酱10g', method: '牛腩焯水，与番茄块炖40分钟，加豆腐再煮5分钟收汁。', source: 'homemade' },
+            { id: 'l5', name: '宫保鸡丁(减脂版)', calories: 480, protein: 34, carbs: 26, fat: 24, ingredients: '鸡胸肉150g，黄瓜丁50g，花生米10g，干辣椒2个，生抽+醋调汁', method: '鸡胸切丁用淀粉抓匀，少油滑炒，加黄瓜和料汁快炒，撒花生。', source: 'homemade' },
+            { id: 'l6', name: '蒜蓉粉丝蒸虾', calories: 460, protein: 36, carbs: 34, fat: 18, ingredients: '大虾8只(去壳约120g)，干粉丝20g，金针菇30g，蒜蓉15g', method: '粉丝泡软铺盘，放金针菇和虾，撒蒜蓉蒸6分钟，淋生抽。', source: 'homemade' },
+            { id: 'l7', name: '鸡胸沙拉+全麦包', calories: 500, protein: 40, carbs: 38, fat: 20, ingredients: '鸡胸肉150g，混合生菜80g，全麦面包1片(30g)，油醋汁15ml', method: '鸡胸煎熟切片，生菜打底，面包烤脆撕块，淋油醋汁。', source: 'homemade' },
+            { id: 'l8', name: '豆腐蔬菜杂粮饭', calories: 470, protein: 22, carbs: 56, fat: 16, ingredients: '老豆腐100g，西兰花50g，杂粮(生)50g，生抽+蚝油调汁', method: '杂粮蒸熟。豆腐煎金黄，西兰花焯水，加料汁翻炒盖在饭上。', source: 'homemade' },
+            { id: 'l9', name: '魔芋烧鸭(去脂)', calories: 510, protein: 30, carbs: 28, fat: 28, ingredients: '鸭胸肉(去皮)120g，魔芋结200g，姜片10g，豆瓣酱5g', method: '鸭胸切片少油煸炒，加魔芋、姜片和豆瓣酱，加水焖10分钟。', source: 'homemade' },
+            { id: 'l10', name: '三文鱼藜麦碗', calories: 560, protein: 34, carbs: 42, fat: 26, ingredients: '三文鱼(带皮)120g，藜麦(生)40g，芦笋50g', method: '藜麦煮15分钟。三文鱼皮朝下煎4分钟，翻面再煎2分钟，芦笋煎熟配盘。', source: 'homemade' },
+            { id: 'l11', name: '番茄炒蛋', calories: 220, protein: 14, carbs: 18, fat: 14, ingredients: '鸡蛋2个，番茄300g，盐，葱花', method: '鸡蛋炒散，番茄炒出汁，混合调味。', source: 'homemade' },
+            { id: 'l12', name: '青椒土豆丝', calories: 180, protein: 4, carbs: 26, fat: 8, ingredients: '土豆200g，青椒50g，油，盐', method: '土豆切丝，青椒切丝，快炒。', source: 'homemade' },
+            { id: 'l13', name: '蒜蓉西兰花', calories: 80, protein: 4, carbs: 10, fat: 4, ingredients: '西兰花300g，蒜末，油', method: '西兰花焯水，蒜末爆香后翻炒。', source: 'homemade' },
+            { id: 'l14', name: '凉拌鸡胸肉', calories: 150, protein: 25, carbs: 4, fat: 4, ingredients: '鸡胸肉150g，黄瓜丝，生抽，醋', method: '鸡胸煮熟撕丝，加黄瓜丝和调料。', source: 'homemade' },
+            { id: 'l15', name: '清蒸鲈鱼', calories: 400, protein: 35, carbs: 2, fat: 28, ingredients: '鲈鱼1条(300g)，姜葱，蒸鱼豉油', method: '鱼身划刀，铺姜葱蒸8分钟，淋热油和豉油。', source: 'homemade' },
+            { id: 'l16', name: '白灼虾', calories: 160, protein: 24, carbs: 2, fat: 6, ingredients: '鲜虾200g，姜片，生抽', method: '水开下虾煮2分钟，蘸生抽食用。', source: 'homemade' },
+            { id: 'l17', name: '冬瓜排骨汤（去油）', calories: 200, protein: 18, carbs: 12, fat: 10, ingredients: '排骨150g，冬瓜300g，姜', method: '排骨焯水，加冬瓜炖40分钟，撇去浮油。', source: 'homemade' },
+            { id: 'l18', name: '凉拌藕片', calories: 100, protein: 3, carbs: 22, fat: 1, ingredients: '莲藕200g，辣椒油，醋', method: '藕片焯水过凉，加调料拌匀。', source: 'homemade' },
+            { id: 'l19', name: '炒时蔬（混合）', calories: 70, protein: 2, carbs: 12, fat: 3, ingredients: '各种时蔬300g，蒜', method: '蔬菜洗净炒熟。', source: 'homemade' },
+            { id: 'l20', name: '蒸鸡蛋羹', calories: 90, protein: 8, carbs: 3, fat: 5, ingredients: '鸡蛋2个，温水150ml', method: '打散过筛蒸10分钟。', source: 'homemade' },
+            { id: 'l21', name: '紫菜蛋花汤', calories: 60, protein: 5, carbs: 6, fat: 2, ingredients: '紫菜5g，鸡蛋1个，葱花', method: '水开下紫菜，淋蛋液，撒葱花。', source: 'homemade' },
+            { id: 'l22', name: '酸辣汤（低脂）', calories: 80, protein: 4, carbs: 12, fat: 2, ingredients: '木耳，豆腐，醋，辣椒', method: '煮汤调味。', source: 'homemade' },
+            { id: 'l23', name: '海带豆腐汤', calories: 100, protein: 6, carbs: 12, fat: 4, ingredients: '海带30g，豆腐100g', method: '海带豆腐同煮。', source: 'homemade' },
+            { id: 'l24', name: '香菇青菜', calories: 60, protein: 3, carbs: 8, fat: 3, ingredients: '香菇50g，青菜300g', method: '香菇切片与青菜同炒。', source: 'homemade' },
+            { id: 'l25', name: '凉拌莴笋', calories: 40, protein: 1, carbs: 8, fat: 0.5, ingredients: '莴笋200g，盐，香油', method: '莴笋切丝，盐腌后加香油。', source: 'homemade' },
+            { id: 'l26', name: '炒豆芽', calories: 40, protein: 2, carbs: 6, fat: 1, ingredients: '豆芽300g，醋', method: '豆芽快速翻炒，加醋出锅。', source: 'homemade' },
+            { id: 'l27', name: '芹菜炒香干', calories: 130, protein: 8, carbs: 10, fat: 8, ingredients: '芹菜200g，香干100g', method: '芹菜香干切段同炒。', source: 'homemade' },
+            { id: 'l28', name: '凉拌苦瓜', calories: 40, protein: 1, carbs: 8, fat: 0.5, ingredients: '苦瓜200g，蒜末，醋', method: '苦瓜焯水，加调料。', source: 'homemade' },
+            { id: 'l29', name: '丝瓜蛋汤', calories: 70, protein: 5, carbs: 8, fat: 3, ingredients: '丝瓜200g，鸡蛋1个', method: '丝瓜煮软，淋蛋液。', source: 'homemade' },
+            { id: 'l30', name: '山药排骨汤（去油）', calories: 220, protein: 20, carbs: 18, fat: 12, ingredients: '排骨150g，山药200g', method: '排骨焯水，加山药炖40分钟。', source: 'homemade' },
+            { id: 'l31', name: '沙县鸡腿饭', calories: 550, protein: 30, carbs: 60, fat: 20, ingredients: '鸡腿，米饭，蔬菜', method: '外卖点餐。', source: 'takeout' },
+            { id: 'l32', name: '麦当劳巨无霸', calories: 550, protein: 25, carbs: 46, fat: 30, ingredients: '牛肉饼，面包，芝士', method: '外卖点餐。', source: 'takeout' },
+            { id: 'l33', name: '肯德基辣鸡腿堡', calories: 600, protein: 28, carbs: 48, fat: 34, ingredients: '鸡肉，面包，生菜', method: '外卖点餐。', source: 'takeout' },
+            { id: 'l34', name: '兰州拉面（牛肉）', calories: 500, protein: 22, carbs: 64, fat: 16, ingredients: '拉面，牛肉，汤', method: '外卖点餐。', source: 'takeout' },
+            { id: 'l35', name: '黄焖鸡米饭', calories: 580, protein: 32, carbs: 58, fat: 24, ingredients: '鸡腿肉，土豆，米饭', method: '外卖点餐。', source: 'takeout' },
+            { id: 'l36', name: '麻辣烫（蔬菜+肉类）', calories: 400, protein: 20, carbs: 30, fat: 18, ingredients: '各种食材自选', method: '外卖点餐，可选清汤。', source: 'takeout' },
+            { id: 'l37', name: '杨国福麻辣烫（自选）', calories: 450, protein: 22, carbs: 32, fat: 20, ingredients: '自选食材', method: '外卖点餐。', source: 'takeout' },
+            { id: 'l38', name: '吉野家牛肉饭', calories: 580, protein: 30, carbs: 62, fat: 22, ingredients: '牛肉，洋葱，米饭', method: '外卖点餐。', source: 'takeout' },
+            { id: 'l39', name: '味千拉面（豚骨）', calories: 520, protein: 20, carbs: 66, fat: 18, ingredients: '拉面，豚骨汤，叉烧', method: '外卖点餐。', source: 'takeout' },
+            { id: 'l40', name: '凉皮（陕西）', calories: 380, protein: 10, carbs: 50, fat: 16, ingredients: '凉皮，面筋，黄瓜', method: '外卖点餐。', source: 'takeout' },
+            { id: 'l41', name: '云南米线（过桥）', calories: 450, protein: 16, carbs: 58, fat: 14, ingredients: '米线，肉片，蔬菜', method: '外卖点餐。', source: 'takeout' },
+            { id: 'l42', name: '煲仔饭（腊味）', calories: 600, protein: 24, carbs: 64, fat: 28, ingredients: '米饭，腊肠，青菜', method: '外卖点餐。', source: 'takeout' },
+            { id: 'l43', name: '石锅拌饭', calories: 550, protein: 20, carbs: 60, fat: 22, ingredients: '米饭，肉，蔬菜，鸡蛋', method: '外卖点餐。', source: 'takeout' },
+            { id: 'l44', name: '寿司拼盘（12粒）', calories: 400, protein: 16, carbs: 60, fat: 10, ingredients: '米饭，生鱼片，海苔', method: '外卖点餐。', source: 'takeout' },
+            { id: 'l45', name: '越南河粉（牛肉）', calories: 420, protein: 20, carbs: 52, fat: 14, ingredients: '河粉，牛肉，汤', method: '外卖点餐。', source: 'takeout' },
+            { id: 'l46', name: '冬阴功汤（海鲜）', calories: 280, protein: 18, carbs: 20, fat: 14, ingredients: '虾，鱼，蘑菇，香料', method: '外卖点餐。', source: 'takeout' },
+            { id: 'l47', name: '咖喱鸡饭', calories: 540, protein: 28, carbs: 56, fat: 22, ingredients: '鸡肉，土豆，咖喱，米饭', method: '外卖点餐。', source: 'takeout' },
+            { id: 'l48', name: '酸菜鱼饭', calories: 500, protein: 30, carbs: 44, fat: 20, ingredients: '鱼肉，酸菜，米饭', method: '外卖点餐。', source: 'takeout' },
+            { id: 'l49', name: '水煮鱼（单人份）', calories: 480, protein: 28, carbs: 20, fat: 30, ingredients: '鱼片，豆芽，辣椒', method: '外卖点餐。', source: 'takeout' },
+            { id: 'l50', name: '冒菜（自选）', calories: 400, protein: 18, carbs: 30, fat: 20, ingredients: '自选食材', method: '外卖点餐。', source: 'takeout' }
+        ],
+        dinner: [
+            { id: 'd1', name: '黄瓜炒蛋', calories: 280, protein: 16, carbs: 12, fat: 18, ingredients: '鸡蛋2个(100g)，黄瓜200g，盐+白胡椒', method: '鸡蛋炒熟盛出，黄瓜切片快炒1分钟，混入鸡蛋加盐调味。', source: 'homemade' },
+            { id: 'd2', name: '凉拌木耳腐竹', calories: 240, protein: 10, carbs: 20, fat: 12, ingredients: '干木耳15g，干腐竹30g，香菜10g，生抽+醋+香油调汁', method: '木耳腐竹泡发焯水2分钟，过凉水，加香菜和酱汁拌匀。', source: 'homemade' },
+            { id: 'd3', name: '紫菜豆腐虾皮汤', calories: 200, protein: 18, carbs: 16, fat: 6, ingredients: '干紫菜3g，嫩豆腐150g，虾皮5g，葱花5g', method: '水烧开放豆腐和虾皮煮3分钟，撕入紫菜，加盐撒葱花。', source: 'homemade' },
+            { id: 'd4', name: '菌菇蔬菜汤', calories: 190, protein: 8, carbs: 24, fat: 5, ingredients: '混合菌菇(香菇+杏鲍菇)80g，大白菜150g，姜片', method: '菌菇切片与白菜同煮10分钟，加盐和几滴香油。', source: 'homemade' },
+            { id: 'd5', name: '白灼菜心+蚝油', calories: 160, protein: 6, carbs: 18, fat: 6, ingredients: '菜心250g，薄盐蚝油10g，蒜末5g', method: '菜心焯水1分钟捞出，锅少油爆蒜末，加蚝油和少量水煮开淋上。', source: 'homemade' },
+            { id: 'd6', name: '西红柿炒蛋(少油)', calories: 260, protein: 14, carbs: 20, fat: 14, ingredients: '鸡蛋2个(100g)，番茄300g，盐+葱花', method: '鸡蛋炒散盛出，番茄炒出汁，混入鸡蛋加盐，撒葱花。', source: 'homemade' },
+            { id: 'd7', name: '凉拌菠菜+花生', calories: 230, protein: 8, carbs: 16, fat: 16, ingredients: '菠菜250g，烤花生碎10g，蒜末+生抽+醋调汁', method: '菠菜焯水30秒挤干水分，加酱汁和花生碎拌匀。', source: 'homemade' },
+            { id: 'd8', name: '海带冬瓜汤', calories: 150, protein: 4, carbs: 22, fat: 4, ingredients: '干海带10g(泡发后约60g)，冬瓜300g，葱花', method: '海带切丝，冬瓜切片，同煮15分钟，加盐撒葱花。', source: 'homemade' },
+            { id: 'd9', name: '虾仁蒸蛋', calories: 220, protein: 22, carbs: 6, fat: 12, ingredients: '鸡蛋2个(100g)，虾仁6只(约50g)，温水150ml', method: '鸡蛋打散加温水过筛，放虾仁，盖上保鲜膜蒸10分钟。', source: 'homemade' },
+            { id: 'd10', name: '蔬菜大拌菜', calories: 210, protein: 6, carbs: 28, fat: 8, ingredients: '生菜80g，紫甘蓝50g，樱桃番茄40g，油醋汁15ml', method: '所有蔬菜撕小块，淋上油醋汁拌匀即可。', source: 'homemade' },
+            { id: 'd11', name: '酸辣白菜', calories: 70, protein: 2, carbs: 12, fat: 3, ingredients: '白菜300g，干辣椒，醋', method: '白菜炒软，加醋辣椒调味。', source: 'homemade' },
+            { id: 'd12', name: '蒜泥茄子', calories: 80, protein: 3, carbs: 14, fat: 4, ingredients: '茄子200g，蒜末，生抽', method: '茄子蒸熟，撕条加蒜末酱油。', source: 'homemade' },
+            { id: 'd13', name: '凉拌西芹', calories: 40, protein: 1, carbs: 8, fat: 0.5, ingredients: '西芹200g，盐，香油', method: '西芹切段焯水，加调料。', source: 'homemade' },
+            { id: 'd14', name: '清炒豆苗', calories: 50, protein: 2, carbs: 6, fat: 2, ingredients: '豆苗300g，蒜', method: '豆苗快炒加盐。', source: 'homemade' },
+            { id: 'd15', name: '蒸南瓜', calories: 70, protein: 2, carbs: 16, fat: 0.5, ingredients: '南瓜300g', method: '蒸熟。', source: 'homemade' },
+            { id: 'd16', name: '水煮玉米', calories: 110, protein: 4, carbs: 24, fat: 2, ingredients: '玉米1根', method: '水煮15分钟。', source: 'homemade' },
+            { id: 'd17', name: '凉拌豆腐皮', calories: 90, protein: 6, carbs: 10, fat: 4, ingredients: '豆腐皮100g，黄瓜丝，生抽', method: '豆腐皮切丝，加黄瓜丝调料。', source: 'homemade' },
+            { id: 'd18', name: '清炒空心菜', calories: 50, protein: 2, carbs: 8, fat: 2, ingredients: '空心菜300g，蒜', method: '快炒加盐。', source: 'homemade' },
+            { id: 'd19', name: '番茄疙瘩汤', calories: 120, protein: 6, carbs: 20, fat: 3, ingredients: '番茄，面粉，鸡蛋', method: '面粉调疙瘩，番茄煮汤。', source: 'homemade' },
+            { id: 'd20', name: '冬瓜海米汤', calories: 80, protein: 5, carbs: 10, fat: 3, ingredients: '冬瓜200g，海米10g', method: '冬瓜海米同煮。', source: 'homemade' },
+            { id: 'd21', name: '凉拌三丝', calories: 60, protein: 2, carbs: 10, fat: 2, ingredients: '土豆丝，胡萝卜丝，青椒丝', method: '焯水后加调料。', source: 'homemade' },
+            { id: 'd22', name: '蒜蓉娃娃菜', calories: 50, protein: 2, carbs: 10, fat: 2, ingredients: '娃娃菜300g，蒜', method: '蒜蓉炒娃娃菜。', source: 'homemade' },
+            { id: 'd23', name: '香菇油菜', calories: 60, protein: 3, carbs: 8, fat: 3, ingredients: '香菇，油菜', method: '香菇油菜同炒。', source: 'homemade' },
+            { id: 'd24', name: '清炒莴笋叶', calories: 40, protein: 2, carbs: 6, fat: 1, ingredients: '莴笋叶300g', method: '快炒。', source: 'homemade' },
+            { id: 'd25', name: '丝瓜炒蛋', calories: 150, protein: 10, carbs: 10, fat: 9, ingredients: '丝瓜200g，鸡蛋2个', method: '丝瓜炒蛋。', source: 'homemade' },
+            { id: 'd26', name: '苦瓜炒蛋', calories: 160, protein: 12, carbs: 10, fat: 10, ingredients: '苦瓜200g，鸡蛋2个', method: '苦瓜去瓤切片，与蛋同炒。', source: 'homemade' },
+            { id: 'd27', name: '葱油拌面（少油）', calories: 300, protein: 8, carbs: 50, fat: 8, ingredients: '面条100g，葱油', method: '面条煮熟，加葱油调味。', source: 'homemade' },
+            { id: 'd28', name: '清汤馄饨', calories: 250, protein: 12, carbs: 32, fat: 8, ingredients: '馄饨10个，紫菜，虾皮', method: '馄饨煮熟，加紫菜虾皮汤。', source: 'homemade' },
+            { id: 'd29', name: '水饺（素馅）', calories: 280, protein: 10, carbs: 40, fat: 8, ingredients: '水饺10个', method: '煮熟。', source: 'homemade' },
+            { id: 'd30', name: '煎饺（少油）', calories: 300, protein: 12, carbs: 38, fat: 12, ingredients: '煎饺10个', method: '少油煎至金黄。', source: 'homemade' },
+            { id: 'd31', name: '麻辣烫（清汤版）', calories: 350, protein: 18, carbs: 30, fat: 16, ingredients: '自选蔬菜，豆制品，肉类', method: '外卖点餐，选清汤。', source: 'takeout' },
+            { id: 'd32', name: '沙县馄饨', calories: 300, protein: 16, carbs: 40, fat: 10, ingredients: '馄饨，汤', method: '外卖点餐。', source: 'takeout' },
+            { id: 'd33', name: '兰州拉面（小碗）', calories: 420, protein: 18, carbs: 56, fat: 12, ingredients: '拉面，牛肉，汤', method: '外卖点餐。', source: 'takeout' },
+            { id: 'd34', name: '麦当劳汉堡（普通）', calories: 450, protein: 20, carbs: 40, fat: 22, ingredients: '牛肉饼，面包', method: '外卖点餐。', source: 'takeout' },
+            { id: 'd35', name: '肯德基鸡肉卷', calories: 380, protein: 18, carbs: 34, fat: 18, ingredients: '鸡肉，饼皮，生菜', method: '外卖点餐。', source: 'takeout' },
+            { id: 'd36', name: '必胜客披萨（一片）', calories: 280, protein: 12, carbs: 30, fat: 14, ingredients: '面饼，芝士，配料', method: '外卖点餐。', source: 'takeout' },
+            { id: 'd37', name: '味千拉面（小份）', calories: 400, protein: 16, carbs: 50, fat: 14, ingredients: '拉面，汤，叉烧', method: '外卖点餐。', source: 'takeout' },
+            { id: 'd38', name: '吉野家小碗牛肉饭', calories: 450, protein: 24, carbs: 50, fat: 18, ingredients: '牛肉，洋葱，米饭', method: '外卖点餐。', source: 'takeout' },
+            { id: 'd39', name: '煲仔饭（窝蛋牛肉）', calories: 520, protein: 26, carbs: 58, fat: 22, ingredients: '米饭，牛肉，鸡蛋', method: '外卖点餐。', source: 'takeout' },
+            { id: 'd40', name: '桂林米粉', calories: 380, protein: 14, carbs: 48, fat: 14, ingredients: '米粉，肉，花生', method: '外卖点餐。', source: 'takeout' },
+            { id: 'd41', name: '热干面', calories: 400, protein: 12, carbs: 50, fat: 16, ingredients: '面条，芝麻酱', method: '外卖点餐。', source: 'takeout' },
+            { id: 'd42', name: '炸酱面', calories: 450, protein: 16, carbs: 52, fat: 20, ingredients: '面条，肉酱，黄瓜', method: '外卖点餐。', source: 'takeout' },
+            { id: 'd43', name: '寿司（6粒）', calories: 250, protein: 10, carbs: 38, fat: 6, ingredients: '米饭，鱼生', method: '外卖点餐。', source: 'takeout' },
+            { id: 'd44', name: '越南春卷', calories: 200, protein: 8, carbs: 24, fat: 8, ingredients: '米粉，虾，蔬菜', method: '外卖点餐。', source: 'takeout' },
+            { id: 'd45', name: '咖喱鱼蛋（6粒）', calories: 180, protein: 10, carbs: 14, fat: 10, ingredients: '鱼蛋，咖喱汁', method: '外卖点餐。', source: 'takeout' },
+            { id: 'd46', name: '关东煮（多种）', calories: 150, protein: 8, carbs: 16, fat: 6, ingredients: '萝卜，海带，鱼丸', method: '外卖点餐。', source: 'takeout' },
+            { id: 'd47', name: '煎饼果子', calories: 350, protein: 14, carbs: 40, fat: 16, ingredients: '杂粮面，鸡蛋，薄脆', method: '外卖点餐。', source: 'takeout' },
+            { id: 'd48', name: '手抓饼', calories: 400, protein: 8, carbs: 44, fat: 22, ingredients: '饼皮，鸡蛋，生菜', method: '外卖点餐。', source: 'takeout' },
+            { id: 'd49', name: '肉夹馍', calories: 350, protein: 16, carbs: 38, fat: 16, ingredients: '白吉馍，卤肉', method: '外卖点餐。', source: 'takeout' },
+            { id: 'd50', name: '凉皮（小份）', calories: 280, protein: 8, carbs: 38, fat: 10, ingredients: '凉皮，面筋，黄瓜', method: '外卖点餐。', source: 'takeout' }
+        ]
+    };
+
+    // ============================================================
+    // 状态与逻辑（完整无删减）
+    // ============================================================
+    let TARGET_CAL = 1500;
+    let fixed = { breakfast: null, lunch: null, dinner: null };
+    let currentMeals = { breakfast: null, lunch: null, dinner: null };
+    let mealSource = { breakfast: 'all', lunch: 'all', dinner: 'all' };
+
+    const grid = document.getElementById('mealGrid');
+    const shakeBtn = document.getElementById('shakeBtn');
+    const shakeTotal = document.getElementById('shakeTotal');
+    const calFill = document.getElementById('calFill');
+    const calDisplay = document.getElementById('calDisplay');
+    const proteinDisplay = document.getElementById('proteinDisplay');
+    const carbsDisplay = document.getElementById('carbsDisplay');
+    const fatDisplay = document.getElementById('fatDisplay');
+    const statusTip = document.getElementById('statusTip');
+    const targetDisplay = document.getElementById('targetDisplay');
+    const dateDisplay = document.getElementById('dateDisplay');
+    const fixedCount = document.getElementById('fixedCount');
+    const exportBtn = document.getElementById('exportBtn');
+    const settingsBtn = document.getElementById('settingsBtn');
+    const settingsOverlay = document.getElementById('settingsOverlay');
+    const settingsSave = document.getElementById('settingsSave');
+    const setAllUnlimited = document.getElementById('setAllUnlimited');
+
+    function pickRandomFromArray(arr) {
+        if (!arr || arr.length === 0) return null;
+        return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    function getAvailableMeals(type) {
+        const all = MEAL_DATA[type];
+        if (!all) return [];
+        const filter = mealSource[type] || 'all';
+        if (filter === 'all') return all;
+        return all.filter(item => item.source === filter);
+    }
+
+    function resetFixed() {
+        fixed = { breakfast: null, lunch: null, dinner: null };
+        localStorage.removeItem('fixedMeals');
+    }
+
+    function saveFixed() {
+        const toSave = {};
+        ['breakfast', 'lunch', 'dinner'].forEach(type => {
+            toSave[type] = fixed[type] ? fixed[type].id : null;
+        });
+        localStorage.setItem('fixedMeals', JSON.stringify(toSave));
+    }
+
+    function updateFixedCount() {
+        let count = 0;
+        if (fixed.breakfast) count++;
+        if (fixed.lunch) count++;
+        if (fixed.dinner) count++;
+        fixedCount.textContent = count;
+    }
+
+    function calculateFixedTotals() {
+        const meals = [fixed.breakfast, fixed.lunch, fixed.dinner];
+        let totalCal = 0, protein = 0, carbs = 0, fat = 0;
+        meals.forEach(m => {
+            if (m) {
+                totalCal += m.calories;
+                protein += m.protein || 0;
+                carbs += m.carbs || 0;
+                fat += m.fat || 0;
+            }
+        });
+        return { totalCal, protein, carbs, fat };
+    }
+
+    function calculateDisplayTotals() {
+        const meals = [currentMeals.breakfast, currentMeals.lunch, currentMeals.dinner];
+        let totalCal = 0;
+        meals.forEach(m => { if (m) totalCal += m.calories; });
+        return totalCal;
+    }
+
+    function renderCards() {
+        const types = ['breakfast', 'lunch', 'dinner'];
+        const labels = { breakfast: '🌅 早餐', lunch: '☀️ 午餐', dinner: '🌙 晚餐' };
+        const tagClasses = { breakfast: 'breakfast', lunch: 'lunch', dinner: 'dinner' };
+
+        let html = '';
+        let anyMeal = false;
+        types.forEach(type => {
+            const data = currentMeals[type];
+            if (!data) {
+                html += `
+                    <div class="meal-card" style="background:#f9f3ee; border-color:#ddd;">
+                        <div class="meal-header">
+                            <span class="meal-tag ${tagClasses[type]}">${labels[type]}</span>
+                            <span style="color:#aaa; font-size:14px;">暂无匹配菜品</span>
+                        </div>
+                        <div style="padding:10px 0; color:#999; font-size:13px;">请检查来源设置或点击摇一摇</div>
+                    </div>
+                `;
+                return;
+            }
+            anyMeal = true;
+            const isFixed = (fixed[type] && fixed[type].id === data.id);
+            html += `
+                <div class="meal-card ${isFixed ? 'fixed' : ''}" data-type="${type}">
+                    <div class="meal-header">
+                        <span class="meal-tag ${tagClasses[type]}">${labels[type]}</span>
+                        <button class="fix-btn ${isFixed ? 'active' : ''}" data-type="${type}" data-id="${data.id}">${isFixed ? '❤️' : '♡'}</button>
+                    </div>
+                    <div class="meal-header" style="margin-top:2px;">
+                        <span class="meal-name">${data.name}</span>
+                        <span class="meal-cal">${data.calories} kcal</span>
+                    </div>
+                    <div class="recipe-detail">
+                        <div class="ingredients"><strong>🛒 食材：</strong>${data.ingredients}</div>
+                        <div class="method"><strong>👨‍🍳 做法：</strong>${data.method}</div>
+                    </div>
+                </div>
+            `;
+        });
+        grid.innerHTML = html;
+
+        if (!anyMeal) {
+            grid.innerHTML = `<div style="text-align:center;padding:30px 0;color:#aaa;">暂无菜品，请检查数据或设置</div>`;
+        }
+
+        document.querySelectorAll('.fix-btn').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const type = this.dataset.type;
+                const id = this.dataset.id;
+                toggleFix(type, id);
+            });
+        });
+    }
+
+    function toggleFix(type, id) {
+        if (fixed[type] && fixed[type].id === id) {
+            fixed[type] = null;
+        } else {
+            const mealData = currentMeals[type];
+            if (!mealData) return;
+            fixed[type] = { ...mealData };
+        }
+        if (fixed[type]) {
+            currentMeals[type] = { ...fixed[type] };
+        }
+        renderAll();
+        saveFixed();
+    }
+
+    function updateSummary() {
+        const { totalCal, protein, carbs, fat } = calculateFixedTotals();
+        const percent = Math.min((totalCal / TARGET_CAL) * 100, 100);
+        calFill.style.width = percent + '%';
+        calDisplay.textContent = `${totalCal} / ${TARGET_CAL}`;
+        proteinDisplay.textContent = protein;
+        carbsDisplay.textContent = carbs;
+        fatDisplay.textContent = fat;
+
+        if (totalCal === 0) {
+            statusTip.className = 'status-tip';
+            statusTip.textContent = '👆 点击❤️固定餐点，再次点击取消';
+        } else if (totalCal <= TARGET_CAL) {
+            statusTip.className = 'status-tip success';
+            statusTip.textContent = '✅ 固定餐点总热量在目标范围内';
+        } else {
+            statusTip.className = 'status-tip danger';
+            statusTip.textContent = `❌ 固定餐点超目标 ${totalCal - TARGET_CAL} kcal，请取消部分固定`;
+        }
+    }
+
+    function updateShakeTotal() {
+        const total = calculateDisplayTotals();
+        shakeTotal.textContent = `${total} kcal`;
+    }
+
+    function renderAll() {
+        renderCards();
+        updateSummary();
+        updateShakeTotal();
+        updateFixedCount();
+    }
+
+    function generateValidCombination() {
+        const types = ['breakfast', 'lunch', 'dinner'];
+        let attempts = 0;
+        const maxAttempts = 150;
+        let best = null;
+        let bestTotal = Infinity;
+
+        while (attempts < maxAttempts) {
+            attempts++;
+            let temp = {};
+            let valid = true;
+            for (let t of types) {
+                if (fixed[t]) {
+                    temp[t] = { ...fixed[t] };
+                } else {
+                    const candidates = getAvailableMeals(t);
+                    if (candidates.length === 0) {
+                        valid = false;
+                        break;
+                    }
+                    const picked = pickRandomFromArray(candidates);
+                    if (!picked) {
+                        valid = false;
+                        break;
+                    }
+                    temp[t] = picked;
+                }
+            }
+            if (!valid) continue;
+            const total = temp.breakfast.calories + temp.lunch.calories + temp.dinner.calories;
+            if (total <= TARGET_CAL) {
+                return { meals: temp, total, found: true };
+            }
+            if (total < bestTotal) {
+                bestTotal = total;
+                best = temp;
+            }
+        }
+        if (best) {
+            return { meals: best, total: bestTotal, found: false };
+        } else {
+            let fallback = {};
+            for (let t of types) {
+                if (fixed[t]) {
+                    fallback[t] = { ...fixed[t] };
+                } else {
+                    const candidates = getAvailableMeals(t);
+                    fallback[t] = candidates.length ? candidates[0] : null;
+                }
+            }
+            const total = (fallback.breakfast ? fallback.breakfast.calories : 0) +
+                          (fallback.lunch ? fallback.lunch.calories : 0) +
+                          (fallback.dinner ? fallback.dinner.calories : 0);
+            return { meals: fallback, total, found: false };
+        }
+    }
+
+    function shakeAndGenerate() {
+        shakeBtn.disabled = true;
+        shakeBtn.classList.add('shaking');
+        setTimeout(() => {
+            const res = generateValidCombination();
+            currentMeals = res.meals;
+            renderAll();
+            if (!res.found) {
+                statusTip.className = 'status-tip danger';
+                statusTip.textContent = `⚠️ 无法在目标内组合，当前总热量 ${res.total} kcal，请调整设置或取消固定`;
+            } else {
+                statusTip.className = 'status-tip success';
+                statusTip.textContent = '✅ 已生成符合目标的组合！';
+            }
+            shakeBtn.classList.remove('shaking');
+            shakeBtn.disabled = false;
+        }, 400);
+    }
+
+    function editTargetCalorie() {
+        const input = prompt('请输入新的每日热量目标（kcal）：', TARGET_CAL);
+        if (input === null) return;
+        const newVal = parseInt(input.trim());
+        if (isNaN(newVal) || newVal < 100) {
+            alert('请输入有效的数字（≥100）');
+            return;
+        }
+        TARGET_CAL = newVal;
+        targetDisplay.textContent = TARGET_CAL;
+        localStorage.setItem('targetCal', TARGET_CAL);
+        if (calculateDisplayTotals() > TARGET_CAL) {
+            const res = generateValidCombination();
+            currentMeals = res.meals;
+            renderAll();
+            if (!res.found) {
+                statusTip.className = 'status-tip danger';
+                statusTip.textContent = `⚠️ 新目标下无法满足，当前总热量 ${res.total} kcal，请调整设置`;
+            } else {
+                statusTip.className = 'status-tip success';
+                statusTip.textContent = `✅ 已自动调整至新目标 (${TARGET_CAL} kcal)`;
+            }
+        } else {
+            updateSummary();
+            updateShakeTotal();
+        }
+    }
+
+    function exportData() {
+        const now = new Date();
+        const dateStr = now.toISOString().slice(0,10);
+
+        const breakfast = fixed.breakfast ? `${fixed.breakfast.name} ${fixed.breakfast.calories}kcal` : '-';
+        const lunch = fixed.lunch ? `${fixed.lunch.name} ${fixed.lunch.calories}kcal` : '-';
+        const dinner = fixed.dinner ? `${fixed.dinner.name} ${fixed.dinner.calories}kcal` : '-';
+        const total = (fixed.breakfast ? fixed.breakfast.calories : 0) +
+                      (fixed.lunch ? fixed.lunch.calories : 0) +
+                      (fixed.dinner ? fixed.dinner.calories : 0);
+
+        const header = '日期,早餐,午餐,晚餐,总热量';
+        const row = `${dateStr},${breakfast},${lunch},${dinner},${total}kcal`;
+        const content = header + '\n' + row;
+
+        const blob = new Blob(['\uFEFF' + content], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `已吃记录_${dateStr}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    function loadMealSources() {
+        const saved = localStorage.getItem('mealSources');
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                if (parsed.breakfast && ['all','homemade','takeout'].includes(parsed.breakfast)) mealSource.breakfast = parsed.breakfast;
+                if (parsed.lunch && ['all','homemade','takeout'].includes(parsed.lunch)) mealSource.lunch = parsed.lunch;
+                if (parsed.dinner && ['all','homemade','takeout'].includes(parsed.dinner)) mealSource.dinner = parsed.dinner;
+            } catch(e) { /* ignore */ }
+        }
+    }
+
+    function saveMealSources() {
+        localStorage.setItem('mealSources', JSON.stringify(mealSource));
+    }
+
+    function syncSettingsUI() {
+        ['breakfast', 'lunch', 'dinner'].forEach(type => {
+            const container = document.querySelector(`.settings-options[data-meal="${type}"]`);
+            if (!container) return;
+            const options = container.querySelectorAll('.settings-option');
+            options.forEach(opt => {
+                const val = opt.dataset.value;
+                const radio = opt.querySelector('input[type="radio"]');
+                if (radio) {
+                    radio.checked = (val === mealSource[type]);
+                }
+                opt.classList.toggle('active', val === mealSource[type]);
+            });
+        });
+    }
+
+    function applySettingsFromUI() {
+        ['breakfast', 'lunch', 'dinner'].forEach(type => {
+            const container = document.querySelector(`.settings-options[data-meal="${type}"]`);
+            if (!container) return;
+            const selected = container.querySelector('.settings-option.active input[type="radio"]');
+            if (selected) {
+                mealSource[type] = selected.value;
+            }
+        });
+        saveMealSources();
+        const res = generateValidCombination();
+        currentMeals = res.meals;
+        renderAll();
+        if (!res.found) {
+            statusTip.className = 'status-tip danger';
+            statusTip.textContent = `⚠️ 当前设置下无法满足目标，请调整设置或取消固定`;
+        } else {
+            statusTip.className = 'status-tip success';
+            statusTip.textContent = `✅ 已根据新设置重新生成`;
+        }
+    }
+
+    function setAllUnlimitedClick() {
+        mealSource = { breakfast: 'all', lunch: 'all', dinner: 'all' };
+        saveMealSources();
+        syncSettingsUI();
+        const res = generateValidCombination();
+        currentMeals = res.meals;
+        renderAll();
+        if (!res.found) {
+            statusTip.className = 'status-tip danger';
+            statusTip.textContent = `⚠️ 全部不限下无法满足目标，请调整设置或取消固定`;
+        } else {
+            statusTip.className = 'status-tip success';
+            statusTip.textContent = `✅ 已切换为全部不限并重新生成`;
+        }
+        settingsOverlay.classList.remove('active');
+    }
+
+    function init() {
+        resetFixed();
+        loadMealSources();
+        syncSettingsUI();
+
+        const savedTarget = localStorage.getItem('targetCal');
+        if (savedTarget) {
+            const val = parseInt(savedTarget);
+            if (!isNaN(val) && val >= 100) TARGET_CAL = val;
+        }
+        targetDisplay.textContent = TARGET_CAL;
+
+        const now = new Date();
+        dateDisplay.textContent = now.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
+
+        const initial = generateValidCombination();
+        currentMeals = initial.meals;
+        renderAll();
+        if (!initial.found) {
+            statusTip.className = 'status-tip danger';
+            statusTip.textContent = `⚠️ 初始组合无法满足目标，请调整设置或取消部分固定`;
+        }
+
+        targetDisplay.addEventListener('click', editTargetCalorie);
+        shakeBtn.addEventListener('click', shakeAndGenerate);
+        exportBtn.addEventListener('click', exportData);
+
+        settingsBtn.addEventListener('click', () => {
+            syncSettingsUI();
+            settingsOverlay.classList.add('active');
+        });
+        settingsSave.addEventListener('click', () => {
+            applySettingsFromUI();
+            settingsOverlay.classList.remove('active');
+        });
+        setAllUnlimited.addEventListener('click', setAllUnlimitedClick);
+        settingsOverlay.addEventListener('click', function(e) {
+            if (e.target === this) {
+                this.classList.remove('active');
+            }
+        });
+        document.querySelectorAll('.settings-option').forEach(opt => {
+            opt.addEventListener('click', function(e) {
+                const parent = this.closest('.settings-options');
+                if (!parent) return;
+                parent.querySelectorAll('.settings-option').forEach(o => o.classList.remove('active'));
+                this.classList.add('active');
+                const radio = this.querySelector('input[type="radio"]');
+                if (radio) radio.checked = true;
+            });
+        });
+    }
+
+    init();
+</script>
+</body>
+</html>
